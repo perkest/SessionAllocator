@@ -53,7 +53,7 @@ function TierBadge({ tier }: { tier: TrainerTier }) {
 
 // ─── Trainers section ─────────────────────────────────────────────────────────
 
-function TrainersSection(_: { onGenerate: () => void }) {
+function TrainersSection() {
   const { trainers, config, addTrainer, removeTrainer, toggleExcludeTrainer, toggleTrainerAbsentSitting, bulkAddTrainers } = useStore();
   const { sittingsPerDay } = config;
 
@@ -383,7 +383,7 @@ export function SetupPanel({ onGenerate }: SetupPanelProps) {
 
   return (
     <div className="space-y-5">
-      <TrainersSection onGenerate={handleGenerate} />
+      <TrainersSection />
       <ParticipantsSection />
       <ConfigSection />
 
