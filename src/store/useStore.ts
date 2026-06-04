@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { allocate } from '@/lib/allocator';
 import type { Trainer, Participant, EventConfig, AllocationResult, TrainerTier } from '@/types';
 
@@ -124,6 +124,7 @@ export const useStore = create<StoreState>()(
     }),
     {
       name: 'session-allocator',
+      storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
         trainers: state.trainers,
         participants: state.participants,
