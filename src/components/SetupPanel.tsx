@@ -315,38 +315,30 @@ function ConfigSection() {
           <span className="text-sm text-gray-700 font-medium">Number of sessions</span>
           <input
             type="number"
-            min={1}
-            max={20}
             className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+            inputMode="numeric"
             value={config.sessionCount}
-            onChange={(e) =>
-              setConfig({ sessionCount: Math.min(20, Math.max(1, Number(e.target.value))) })
-            }
+            onChange={(e) => setConfig({ sessionCount: Number(e.target.value) })}
           />
         </label>
         <label className="block">
           <span className="text-sm text-gray-700 font-medium">Participants per session</span>
           <input
             type="number"
-            min={1}
             className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+            inputMode="numeric"
             value={config.participantsPerSession}
-            onChange={(e) =>
-              setConfig({ participantsPerSession: Math.max(1, Number(e.target.value)) })
-            }
+            onChange={(e) => setConfig({ participantsPerSession: Number(e.target.value) })}
           />
         </label>
         <label className="block">
           <span className="text-sm text-gray-700 font-medium">Sittings per day</span>
           <input
             type="number"
-            min={1}
-            max={20}
             className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+            inputMode="numeric"
             value={config.sittingsPerDay}
-            onChange={(e) =>
-              setConfig({ sittingsPerDay: Math.min(20, Math.max(1, Number(e.target.value))) })
-            }
+            onChange={(e) => setConfig({ sittingsPerDay: Number(e.target.value) })}
           />
         </label>
       </div>
@@ -374,9 +366,23 @@ interface SetupPanelProps {
 }
 
 export function SetupPanel({ onGenerate }: SetupPanelProps) {
-  const { runAllocation } = useStore();
+  const { config, runAllocation } = useStore();
+  const [error, setError] = useState('');
 
   function handleGenerate() {
+    if (config.sessionCount < 1) {
+      setError('Number of sessions must be at least 1.');
+      return;
+    }
+    if (config.participantsPerSession < 1) {
+      setError('Participants per session must be at least 1.');
+      return;
+    }
+    if (config.sittingsPerDay < 1) {
+      setError('Sittings per day must be at least 1.');
+      return;
+    }
+    setError('');
     runAllocation();
     onGenerate?.();
   }
@@ -386,6 +392,12 @@ export function SetupPanel({ onGenerate }: SetupPanelProps) {
       <TrainersSection />
       <ParticipantsSection />
       <ConfigSection />
+
+      {error && (
+        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+          {error}
+        </p>
+      )}
 
       <button
         onClick={handleGenerate}
