@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useStore } from '@/store/useStore';
 import type { TrainerTier } from '@/types';
 
@@ -53,7 +53,7 @@ function TierBadge({ tier }: { tier: TrainerTier }) {
 
 // ─── Trainers section ─────────────────────────────────────────────────────────
 
-function TrainersSection({ onGenerate }: { onGenerate: () => void }) {
+function TrainersSection(_: { onGenerate: () => void }) {
   const { trainers, config, addTrainer, removeTrainer, toggleExcludeTrainer, toggleTrainerAbsentSitting, bulkAddTrainers } = useStore();
   const { sittingsPerDay } = config;
 

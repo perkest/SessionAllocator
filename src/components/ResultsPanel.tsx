@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
-import type { Session, Sitting, SittingAssignment, Trainer, TrainerTier } from '@/types';
+import type { Sitting, SittingAssignment, Trainer, TrainerTier } from '@/types';
 
 // ─── Tier display config ──────────────────────────────────────────────────────
 
