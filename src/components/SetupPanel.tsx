@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
+import { COUNTRIES } from '@/lib/countries';
 import type { TrainerTier } from '@/types';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -216,19 +217,30 @@ function ParticipantsSection() {
   const { participants, addParticipant, removeParticipant, bulkAddParticipants } = useStore();
 
   const [name, setName] = useState('');
+  const [country, setCountry] = useState('');
   const [bulkText, setBulkText] = useState('');
+  const [bulkError, setBulkError] = useState('');
 
   function handleAdd() {
     const trimmed = name.trim();
     if (!trimmed) return;
-    addParticipant(trimmed);
+    addParticipant(trimmed, country);
     setName('');
+    setCountry('');
   }
 
   function handleBulkParse() {
     if (!bulkText.trim()) return;
-    bulkAddParticipants(bulkText);
-    setBulkText('');
+    setBulkError('');
+    const { badLines } = bulkAddParticipants(bulkText);
+    if (badLines.length > 0) {
+      setBulkError(
+        `Unknown country on line${badLines.length > 1 ? 's' : ''}: ${badLines.join(', ')}. ` +
+        `Use a country name or alpha-3 code (e.g. "Alice, TUR" or "Alice, Turkey").`
+      );
+    } else {
+      setBulkText('');
+    }
   }
 
   return (
@@ -242,6 +254,18 @@ function ParticipantsSection() {
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
         />
+        <select
+          className="border border-gray-200 rounded-lg px-2 py-2 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+          value={country}
+          onChange={(e) => setCountry(e.target.value)}
+        >
+          <option value="">— country —</option>
+          {COUNTRIES.map((c) => (
+            <option key={c.alpha3} value={c.alpha3}>
+              {c.alpha3} – {c.name}
+            </option>
+          ))}
+        </select>
         <button
           onClick={handleAdd}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
@@ -256,13 +280,20 @@ function ParticipantsSection() {
           {participants.map((p) => (
             <li key={p.id} className="flex items-center justify-between rounded-lg px-3 py-2 border border-gray-100 text-sm bg-white text-gray-800">
               <span className="truncate">{p.name}</span>
-              <button
-                onClick={() => removeParticipant(p.id)}
-                className="text-gray-400 hover:text-red-500 transition-colors ml-2 shrink-0"
-                aria-label={`Remove ${p.name}`}
-              >
-                <TrashIcon />
-              </button>
+              <div className="flex items-center gap-2 ml-2 shrink-0">
+                {p.country && (
+                  <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100">
+                    {p.country}
+                  </span>
+                )}
+                <button
+                  onClick={() => removeParticipant(p.id)}
+                  className="text-gray-400 hover:text-red-500 transition-colors"
+                  aria-label={`Remove ${p.name}`}
+                >
+                  <TrashIcon />
+                </button>
+              </div>
             </li>
           ))}
         </ul>
@@ -276,16 +307,20 @@ function ParticipantsSection() {
       <details className="group">
         <summary className="text-xs font-medium text-blue-600 cursor-pointer hover:text-blue-800 select-none list-none flex items-center gap-1">
           <span className="group-open:rotate-90 inline-block transition-transform">▶</span>
-          Bulk paste (one name per line)
+          Bulk paste
         </summary>
         <div className="mt-3 space-y-2">
+          <p className="text-xs text-gray-500">
+            One entry per line. Optionally append <span className="font-mono">, CountryCode</span> or <span className="font-mono">, Full Name</span>.
+          </p>
           <textarea
             rows={5}
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y"
-            placeholder={"Alice\nBob\nCarol"}
+            placeholder={"Alice, TUR\nBob, Germany\nCarol"}
             value={bulkText}
-            onChange={(e) => setBulkText(e.target.value)}
+            onChange={(e) => { setBulkText(e.target.value); setBulkError(''); }}
           />
+          {bulkError && <p className="text-xs text-red-500">{bulkError}</p>}
           <button
             onClick={handleBulkParse}
             className="w-full border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg py-1.5 text-sm font-medium transition-colors"

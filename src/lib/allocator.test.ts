@@ -11,7 +11,7 @@ function makeTrainer(tier: Trainer['tier'], overrides: Partial<Trainer> = {}): T
 }
 
 function makeParticipant(overrides: Partial<Participant> = {}): Participant {
-  return { id: nextId(), name: `Participant-${_id}`, ...overrides };
+  return { id: nextId(), name: `Participant-${_id}`, country: '', ...overrides };
 }
 
 function makeConfig(overrides: Partial<EventConfig> = {}): EventConfig {
@@ -98,14 +98,16 @@ describe('fresh assignment', () => {
   });
 
   it('stacks extra freshes round-robin onto senior-led sessions when supply > session count', () => {
+    // With max 2 trainers per session and 1 senior already placed, each senior-led slot
+    // can hold at most 1 fresh. With 2 senior slots and 3 freshes, only 2 can be placed.
     const trainers = [
       makeTrainer('senior'), makeTrainer('senior'),
       makeTrainer('fresh'), makeTrainer('fresh'), makeTrainer('fresh'),
     ];
     const result = allocate(trainers, [], makeConfig({ sessionCount: 2 }));
     const freshCounts = result.sittings[0].assignments.map((a) => a.trainers.filter((t) => t.tier === 'fresh').length);
-    expect(freshCounts.reduce((a, b) => a + b)).toBe(3);
-    expect(Math.max(...freshCounts)).toBeGreaterThanOrEqual(2);
+    expect(freshCounts.reduce((a, b) => a + b)).toBe(2);
+    expect(freshCounts.every((c) => c <= 1)).toBe(true);
   });
 
   it('leaves some senior-led sessions without a fresh when supply < session count', () => {
@@ -145,8 +147,8 @@ describe('fresh assignment', () => {
 
 describe('junior assignment', () => {
   it('assigns exactly 2 juniors per session when supply is even and sufficient', () => {
+    // No seniors — each session slot is empty so both junior slots fill up to the 2-trainer cap.
     const trainers = [
-      makeTrainer('senior'), makeTrainer('senior'),
       makeTrainer('junior'), makeTrainer('junior'),
       makeTrainer('junior'), makeTrainer('junior'),
     ];
@@ -158,8 +160,8 @@ describe('junior assignment', () => {
   });
 
   it('gives one session a single junior when total is odd', () => {
+    // No seniors — 3 juniors across 2 sessions: one session gets 2, the other gets 1.
     const trainers = [
-      makeTrainer('senior'), makeTrainer('senior'),
       makeTrainer('junior'), makeTrainer('junior'), makeTrainer('junior'),
     ];
     const result = allocate(trainers, [], makeConfig({ sessionCount: 2 }));
@@ -392,6 +394,53 @@ describe('sitting absence', () => {
     const result = allocate([absent, present], [], makeConfig({ sessionCount: 1, sittingsPerDay: 1 }));
     const vacantIds = result.sittings[0].vacantTrainers.map((t) => t.id);
     expect(vacantIds).not.toContain(absent.id);
+  });
+});
+
+// ─── Country constraint ───────────────────────────────────────────────────────
+
+describe('country constraint (max 3 per session)', () => {
+  it('places at most 3 participants from the same country in one session', () => {
+    // 4 participants from TUR, 2 sessions with capacity 5 each
+    const participants = [
+      makeParticipant({ country: 'TUR' }),
+      makeParticipant({ country: 'TUR' }),
+      makeParticipant({ country: 'TUR' }),
+      makeParticipant({ country: 'TUR' }),
+    ];
+    const result = allocate([], participants, makeConfig({ sessionCount: 2, participantsPerSession: 5 }));
+    result.sittings[0].assignments.forEach((a) => {
+      const turCount = a.participants.filter((p) => p.country === 'TUR').length;
+      expect(turCount).toBeLessThanOrEqual(3);
+    });
+  });
+
+  it('warns when the country limit cannot be avoided', () => {
+    // 4 participants from TUR but only 1 session — impossible to satisfy the limit
+    const participants = [
+      makeParticipant({ country: 'TUR' }),
+      makeParticipant({ country: 'TUR' }),
+      makeParticipant({ country: 'TUR' }),
+      makeParticipant({ country: 'TUR' }),
+    ];
+    const result = allocate([], participants, makeConfig({ sessionCount: 1, participantsPerSession: 10 }));
+    expect(result.warnings.some((w) => w.includes('3-per-country limit'))).toBe(true);
+  });
+
+  it('does not warn when participants have no country', () => {
+    const participants = Array.from({ length: 8 }, () => makeParticipant({ country: '' }));
+    const result = allocate([], participants, makeConfig({ sessionCount: 2, participantsPerSession: 5 }));
+    expect(result.warnings.every((w) => !w.includes('country'))).toBe(true);
+  });
+
+  it('allows up to 3 from the same country without warning', () => {
+    const participants = [
+      makeParticipant({ country: 'TUR' }),
+      makeParticipant({ country: 'TUR' }),
+      makeParticipant({ country: 'TUR' }),
+    ];
+    const result = allocate([], participants, makeConfig({ sessionCount: 1, participantsPerSession: 5 }));
+    expect(result.warnings.every((w) => !w.includes('country'))).toBe(true);
   });
 });
 

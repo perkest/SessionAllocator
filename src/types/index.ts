@@ -11,6 +11,7 @@ export interface Trainer {
 export interface Participant {
   id: string;
   name: string;
+  country: string; // ISO 3166-1 alpha-3 code, empty string if not specified
 }
 
 // Sessions are label-only; trainer + participant data lives in SittingAssignment

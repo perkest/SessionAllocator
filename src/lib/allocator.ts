@@ -73,6 +73,11 @@ function allocateSittings(
     return trainers.some((t) => getCount(pid, t.id) >= 2);
   }
 
+  function countryCountIn(slot: { participants: Participant[] }, country: string): number {
+    if (!country) return 0;
+    return slot.participants.filter((p) => p.country === country).length;
+  }
+
   const sittings: Sitting[] = [];
 
   for (let si = 0; si < sittingsPerDay; si++) {
@@ -109,7 +114,7 @@ function allocateSittings(
     } else {
       for (let f = 0; f < freshes.length; f++) {
         const target = seniorSlots[f % seniorSlots.length];
-        if (target.trainers.length < 4) target.trainers.push(freshes[f]);
+        if (target.trainers.length < 2) target.trainers.push(freshes[f]);
       }
     }
 
@@ -117,7 +122,7 @@ function allocateSittings(
     const slotsByLoad = [...slots].sort((a, b) => a.trainers.length - b.trainers.length);
     let jIdx = 0;
     for (const slot of slotsByLoad) {
-      const capacity = Math.max(0, 4 - slot.trainers.length);
+      const capacity = Math.max(0, 2 - slot.trainers.length);
       const take = Math.min(capacity, 2, juniors.length - jIdx);
       for (let k = 0; k < take; k++) slot.trainers.push(juniors[jIdx++]);
     }
@@ -136,22 +141,34 @@ function allocateSittings(
     // ── Participant assignment ────────────────────────────────────────────────
 
     const shuffledParticipants = shuffle(participants);
-    let overrideCount = 0;
+    let trainerOverrideCount = 0;
+    let countryOverrideCount = 0;
 
     for (const p of shuffledParticipants) {
-      const valid = slots.filter((s) => s.remaining > 0 && !wouldViolate(p.id, s.trainers));
+      // Tier 1: satisfies both trainer-encounter AND country ≤ 3
+      const tier1 = slots.filter(
+        (s) => s.remaining > 0 && !wouldViolate(p.id, s.trainers) && countryCountIn(s, p.country) < 3
+      );
 
-      let chosen =
-        valid.length > 0
-          ? valid.reduce((best, s) => (s.remaining > best.remaining ? s : best))
-          : null;
+      // Tier 2: satisfies trainer-encounter but country would exceed 3
+      const tier2 = slots.filter(
+        (s) => s.remaining > 0 && !wouldViolate(p.id, s.trainers)
+      );
 
-      if (!chosen) {
-        const open = slots.filter((s) => s.remaining > 0);
-        if (open.length > 0) {
-          chosen = open.reduce((best, s) => (s.remaining > best.remaining ? s : best));
-          overrideCount++;
-        }
+      // Tier 3: any open slot (full override)
+      const tier3 = slots.filter((s) => s.remaining > 0);
+
+      let chosen: typeof slots[number] | null = null;
+
+      if (tier1.length > 0) {
+        chosen = tier1.reduce((best, s) => (s.remaining > best.remaining ? s : best));
+      } else if (tier2.length > 0) {
+        chosen = tier2.reduce((best, s) => (s.remaining > best.remaining ? s : best));
+        if (p.country) countryOverrideCount++;
+      } else if (tier3.length > 0) {
+        chosen = tier3.reduce((best, s) => (s.remaining > best.remaining ? s : best));
+        trainerOverrideCount++;
+        if (p.country) countryOverrideCount++;
       }
 
       if (chosen) {
@@ -161,10 +178,16 @@ function allocateSittings(
       }
     }
 
-    if (overrideCount > 0) {
+    if (trainerOverrideCount > 0) {
       warnings.push(
-        `Sitting ${sittingId}: ${overrideCount} participant${overrideCount === 1 ? '' : 's'} ` +
+        `Sitting ${sittingId}: ${trainerOverrideCount} participant${trainerOverrideCount === 1 ? '' : 's'} ` +
         `could not avoid repeating a trainer — constraint overridden.`
+      );
+    }
+    if (countryOverrideCount > 0) {
+      warnings.push(
+        `Sitting ${sittingId}: ${countryOverrideCount} participant${countryOverrideCount === 1 ? '' : 's'} ` +
+        `could not avoid the 3-per-country limit — constraint overridden.`
       );
     }
 

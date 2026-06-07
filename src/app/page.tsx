@@ -17,7 +17,7 @@ export default function Home() {
           </div>
           <div className="text-xs text-gray-400 text-right">
             <span>made by @mrt_vrlk</span>
-            <span className="ml-2 text-gray-300">v1.0</span>
+            <span className="ml-2 text-gray-300">v1.1</span>
           </div>
         </div>
       </nav>

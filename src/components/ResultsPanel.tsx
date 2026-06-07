@@ -29,7 +29,7 @@ function formatAsText(sittings: Sitting[]): string {
             ? a.trainers.map((t) => `${t.name} (${TIER_ROLE_LABEL[t.tier]})`).join(', ')
             : 'None';
           const participantLine = a.participants.length
-            ? a.participants.map((p) => p.name).join(', ')
+            ? a.participants.map((p) => p.country ? `${p.name} (${p.country})` : p.name).join(', ')
             : 'None';
           return (
             `Sitting ${sitting.id} - Session ${a.sessionId}\n` +
@@ -87,8 +87,13 @@ function SessionCard({ assignment }: { assignment: SittingAssignment }) {
         ) : (
           <ol className="list-decimal list-inside space-y-0.5">
             {assignment.participants.map((p) => (
-              <li key={p.id} className="text-sm text-gray-800">
-                {p.name}
+              <li key={p.id} className="text-sm text-gray-800 flex items-center gap-1.5">
+                <span>{p.name}</span>
+                {p.country && (
+                  <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 shrink-0">
+                    {p.country}
+                  </span>
+                )}
               </li>
             ))}
           </ol>
