@@ -17,8 +17,8 @@ function shuffle<T>(arr: T[]): T[] {
  * - Senior + Fresh pairing: each session gets 1 senior as lead. Freshes are co-assigned
  *   only to senior-led sessions — pairing fresh with juniors only is forbidden.
  *   Extras stack round-robin over senior-led sessions.
- * - Junior pairing: 2 juniors per session, prioritising sessions with the fewest
- *   trainers so uncovered sessions fill before already-staffed ones.
+ * - Junior pairing: juniors fill the least-loaded sessions first, up to the 2-trainer
+ *   cap per session (so a senior-led session can only receive 1 junior).
  * - Vacant trainers: active trainers present for a sitting but not placed in any session
  *   are recorded in `Sitting.vacantTrainers`.
  *
@@ -104,7 +104,7 @@ function allocateSittings(
       if (s < seniors.length) slots[s].trainers.push(seniors[s]);
     }
 
-    // Freshes: only to senior-led slots; extras stack round-robin (capped at 4 trainers per slot)
+    // Freshes: only to senior-led slots; extras stack round-robin (capped at 2 trainers per slot)
     const seniorSlots = slots.filter((s) => s.trainers.some((t) => t.tier === 'senior'));
     if (freshes.length > 0 && seniorSlots.length === 0) {
       warnings.push(
@@ -118,7 +118,7 @@ function allocateSittings(
       }
     }
 
-    // Juniors: 2 per session, least-loaded slots first (capped at 4 trainers per slot)
+    // Juniors: fill least-loaded slots first (capped at 2 trainers per slot)
     const slotsByLoad = [...slots].sort((a, b) => a.trainers.length - b.trainers.length);
     let jIdx = 0;
     for (const slot of slotsByLoad) {
